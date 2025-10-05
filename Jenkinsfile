@@ -92,26 +92,19 @@ pipeline {
         stage('Deploy') {
             agent {
                 docker {
-                    image 'node:18-bullseye'
+                    image 'node:18-alpine'
                     reuseNode true
                 }
             }
             steps {
                 sh '''
-                    # Create a minimal passwd entry for the current user
-                    CURRENT_UID=$(id -u)
-                    CURRENT_GID=$(id -g)
-                    
-                    # Check if user exists, if not create entry
-                    if ! getent passwd $CURRENT_UID > /dev/null 2>&1; then
-                        echo "jenkins:x:$CURRENT_UID:$CURRENT_GID:Jenkins User:/tmp:/bin/bash" >> /etc/passwd
-                    fi
-                    
-                    export HOME=/tmp
+                    # Install netlify-cli and use node directly to bypass user checks
                     export npm_config_cache=${WORKSPACE}/.npm-cache
-                    npm install netlify-cli@20.1.1
-                    node_modules/.bin/netlify --version
-                    node_modules/.bin/netlify status
+                    npm install netlify-cli node-fetch@2
+                    
+                    # Use netlify via npx which handles the user issue better
+                    npx netlify --version
+                    npx netlify status
                 '''
             }
         }
