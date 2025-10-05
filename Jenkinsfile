@@ -90,21 +90,18 @@ pipeline {
             }
         }
         stage('Deploy') {
-            agent {
-                docker {
-                    image 'node:18-alpine'
-                    reuseNode true
-                }
-            }
+            // Run directly on Jenkins agent, not in Docker container
             steps {
                 sh '''
-                    # Install netlify-cli and use node directly to bypass user checks
+                    # Set npm cache
                     export npm_config_cache=${WORKSPACE}/.npm-cache
-                    npm install netlify-cli node-fetch@2
                     
-                    # Use netlify via npx which handles the user issue better
-                    npx netlify --version
-                    npx netlify status
+                    # Install netlify-cli locally if not already installed
+                    npm install netlify-cli
+                    
+                    # Run netlify commands
+                    node_modules/.bin/netlify --version
+                    node_modules/.bin/netlify status
                 '''
             }
         }
