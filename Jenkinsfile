@@ -90,18 +90,16 @@ pipeline {
             }
         }
         stage('Deploy') {
-            // Run directly on Jenkins agent, not in Docker container
+            agent {
+                docker {
+                    image 'williamjackson/netlify-cli'
+                    reuseNode true
+                }
+            }
             steps {
                 sh '''
-                    # Set npm cache
-                    export npm_config_cache=${WORKSPACE}/.npm-cache
-                    
-                    # Install netlify-cli locally if not already installed
-                    npm install netlify-cli
-                    
-                    # Run netlify commands
-                    node_modules/.bin/netlify --version
-                    node_modules/.bin/netlify status
+                    netlify --version
+                    netlify status
                 '''
             }
         }
