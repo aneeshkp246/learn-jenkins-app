@@ -1,0 +1,10 @@
+FROM node:18-alpine
+
+# Create user with the same UID/GID as Jenkins
+RUN addgroup -g 144 jenkins && \
+    adduser -D -u 132 -G jenkins jenkins
+
+# Switch to jenkins user
+USER jenkins
+
+WORKDIR /home/jenkins

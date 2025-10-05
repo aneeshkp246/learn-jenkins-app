@@ -91,15 +91,17 @@ pipeline {
         }
         stage('Deploy') {
             agent {
-                docker {
-                    image 'williamjackson/netlify-cli'
+                dockerfile {
+                    filename 'Dockerfile.deploy'
                     reuseNode true
                 }
             }
             steps {
                 sh '''
-                    netlify --version
-                    netlify status
+                    export npm_config_cache=${WORKSPACE}/.npm-cache
+                    npm install netlify-cli
+                    node_modules/.bin/netlify --version
+                    node_modules/.bin/netlify status
                 '''
             }
         }
