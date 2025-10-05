@@ -98,11 +98,9 @@ pipeline {
             }
             steps {
                 sh '''
-                    if ! id -u &>/dev/null; then
-                        echo "jenkins:x:$(id -u):$(id -g):Jenkins:/tmp:/bin/bash" >> /etc/passwd
-                    fi
+                    export HOME=/tmp
                     export npm_config_cache=${WORKSPACE}/.npm-cache
-                    npm install netlify-cli@20.1.1
+                    npm install netlify-cli
                     node_modules/.bin/netlify --version
                     echo "Deploying to production..."
                     node_modules/.bin/netlify status
