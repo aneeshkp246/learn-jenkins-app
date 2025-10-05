@@ -2,6 +2,11 @@ pipeline {
     agent any
 
     stages {
+        stage('Emergency Cleanup') {
+            steps {
+                sh 'sudo rm -rf jest-results playwright-report || true'
+            }
+        }
         stage('Build') {
             agent {
                 docker {
