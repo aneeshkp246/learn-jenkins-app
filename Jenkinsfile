@@ -59,7 +59,7 @@ pipeline {
                     }
                 }
 
-                stage('E2E') {
+                stage('Local E2E') {
                     agent {
                         docker {
                             image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
@@ -85,7 +85,7 @@ pipeline {
                                 keepAll: false, 
                                 reportDir: 'playwright-report', 
                                 reportFiles: 'index.html', 
-                                reportName: 'Playwright HTML Report', 
+                                reportName: 'Playwright HTML Report for Local', 
                                 reportTitles: '', 
                                 useWrapperFileDirectly: true
                             ])
@@ -112,5 +112,36 @@ pipeline {
                 '''
             }
         }
+        stage('Prod E2E') {
+                    agent {
+                        docker {
+                            image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
+                            reuseNode true
+                        }
+                    }
+                    environment {
+                        CI_ENVIRONMENT_URL = 'https://guileless-lokum-460112.netlify.app'
+                    }
+                    steps {
+                        echo 'E2E stage'
+                        sh '''
+                            npx playwright test --reporter=html
+                        '''
+                    }
+                    post {
+                        always {
+                            publishHTML([
+                                allowMissing: false, 
+                                alwaysLinkToLastBuild: false, 
+                                keepAll: false, 
+                                reportDir: 'playwright-report', 
+                                reportFiles: 'index.html', 
+                                reportName: 'Playwright HTML Report for Production', 
+                                reportTitles: '', 
+                                useWrapperFileDirectly: true
+                            ])
+                        }
+                    }
+                }
     }
 }
