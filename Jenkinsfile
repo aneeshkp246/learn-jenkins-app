@@ -123,7 +123,7 @@ pipeline {
                         CI_ENVIRONMENT_URL = 'https://guileless-lokum-460112.netlify.app'
                     }
                     steps {
-                        echo 'E2E stage'
+                        echo 'E2E stage for Production'
                         sh '''
                             npx playwright test --reporter=html
                         '''
