@@ -8,6 +8,23 @@ pipeline {
     }
 
     stages {
+        stage('AWS') {
+            agent{
+                docker {
+                    image 'amazon/aws-cli:latest'
+                    reuseNode true
+                    args "--entrypoint=''"
+                }
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'my-aws', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                    sh '''
+                        aws --version
+                        aws s3 ls
+                    '''
+                }
+            }
+        }
         stage('Emergency Cleanup') {
             steps {
                 sh 'sudo rm -rf jest-results playwright-report || true'
