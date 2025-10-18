@@ -94,7 +94,25 @@ pipeline {
                 }
             }
         }
-        stage('Deploy') {
+        stage('Deploy staging') {
+            agent {
+                dockerfile {
+                    filename 'Dockerfile.deploy'
+                    reuseNode true
+                }
+            }
+            steps {
+                sh '''
+                    export npm_config_cache=${WORKSPACE}/.npm-cache
+                    npm install netlify-cli
+                    node_modules/.bin/netlify --version
+                    node_modules/.bin/netlify status
+                    echo "Deploying to staging. Site ID: $NETLIFY_SITE_ID"
+                    node_modules/.bin/netlify deploy --dir=build --no-build --site $NETLIFY_SITE_ID
+                '''
+            }
+        }
+        stage('Deploy prod') {
             agent {
                 dockerfile {
                     filename 'Dockerfile.deploy'
