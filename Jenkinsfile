@@ -104,14 +104,48 @@ pipeline {
             steps {
                 sh '''
                     export npm_config_cache=${WORKSPACE}/.npm-cache
-                    npm install netlify-cli
+                    npm install netlify-cli node-jq
                     node_modules/.bin/netlify --version
                     node_modules/.bin/netlify status
                     echo "Deploying to staging. Site ID: $NETLIFY_SITE_ID"
-                    node_modules/.bin/netlify deploy --dir=build --no-build --site $NETLIFY_SITE_ID
+                    node_modules/.bin/netlify deploy --dir=build --no-build --site $NETLIFY_SITE_ID --json > deploy-info.json
                 '''
+                script{
+                    env.STAGING_URL=sh(script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-info.json", returnStdout: true)
+                }
             }
         }
+        stage('Staging E2E') {
+                    agent {
+                        docker {
+                            image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
+                            reuseNode true
+                        }
+                    }
+                    environment {
+                        CI_ENVIRONMENT_URL = "${env.STAGING_URL.trim()}"
+                    }
+                    steps {
+                        echo 'E2E stage for Staging'
+                        sh '''
+                            npx playwright test --reporter=html
+                        '''
+                    }
+                    post {
+                        always {
+                            publishHTML([
+                                allowMissing: false, 
+                                alwaysLinkToLastBuild: false, 
+                                keepAll: false, 
+                                reportDir: 'playwright-report', 
+                                reportFiles: 'index.html', 
+                                reportName: 'Playwright HTML Report for Staging', 
+                                reportTitles: '', 
+                                useWrapperFileDirectly: true
+                            ])
+                        }
+                    }
+            }
         stage('Approval') {
             steps {
                 input message: 'Approve deployment to production?', ok: 'Yes, I am sure!'
