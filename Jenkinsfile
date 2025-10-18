@@ -8,28 +8,12 @@ pipeline {
     }
 
     stages {
-        stage('AWS') {
-            agent{
-                docker {
-                    image 'amazon/aws-cli:latest'
-                    reuseNode true
-                    args "--entrypoint=''"
-                }
-            }
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'my-aws', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
-                    sh '''
-                        aws --version
-                        aws s3 ls
-                    '''
-                }
-            }
-        }
         stage('Emergency Cleanup') {
             steps {
                 sh 'sudo rm -rf jest-results playwright-report || true'
             }
         }
+
         stage('Build') {
             agent {
                 docker {
@@ -41,7 +25,7 @@ pipeline {
                 sh '''
                     # Set npm cache to workspace to avoid permission issues
                     export npm_config_cache=${WORKSPACE}/.npm-cache
-                    
+
                     echo "Building with Docker"
                     ls -la
                     node --version
@@ -52,6 +36,7 @@ pipeline {
                 '''
             }
         }
+
         stage('Test') {
             parallel {
                 stage('Unit Tests') {
@@ -76,7 +61,6 @@ pipeline {
                         }
                     }
                 }
-
                 stage('Local E2E') {
                     agent {
                         docker {
@@ -98,13 +82,13 @@ pipeline {
                     post {
                         always {
                             publishHTML([
-                                allowMissing: false, 
-                                alwaysLinkToLastBuild: false, 
-                                keepAll: false, 
-                                reportDir: 'playwright-report', 
-                                reportFiles: 'index.html', 
-                                reportName: 'Playwright HTML Report for Local', 
-                                reportTitles: '', 
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: false,
+                                keepAll: false,
+                                reportDir: 'playwright-report',
+                                reportFiles: 'index.html',
+                                reportName: 'Playwright HTML Report for Local',
+                                reportTitles: '',
                                 useWrapperFileDirectly: true
                             ])
                         }
@@ -112,6 +96,7 @@ pipeline {
                 }
             }
         }
+
         stage('Deploy staging') {
             agent {
                 dockerfile {
@@ -128,42 +113,42 @@ pipeline {
                     echo "Deploying to staging. Site ID: $NETLIFY_SITE_ID"
                     node_modules/.bin/netlify deploy --dir=build --no-build --site $NETLIFY_SITE_ID --json > deploy-info.json
                 '''
-                script{
-                    env.STAGING_URL=sh(script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-info.json", returnStdout: true)
+                script {
+                    env.STAGING_URL = sh(script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-info.json", returnStdout: true)
                 }
             }
         }
         stage('Staging E2E') {
-                    agent {
-                        docker {
-                            image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
-                            reuseNode true
-                        }
-                    }
-                    environment {
-                        CI_ENVIRONMENT_URL = "${env.STAGING_URL.trim()}"
-                    }
-                    steps {
-                        echo 'E2E stage for Staging'
-                        sh '''
-                            npx playwright test --reporter=html
-                        '''
-                    }
-                    post {
-                        always {
-                            publishHTML([
-                                allowMissing: false, 
-                                alwaysLinkToLastBuild: false, 
-                                keepAll: false, 
-                                reportDir: 'playwright-report', 
-                                reportFiles: 'index.html', 
-                                reportName: 'Playwright HTML Report for Staging', 
-                                reportTitles: '', 
-                                useWrapperFileDirectly: true
-                            ])
-                        }
-                    }
+            agent {
+                docker {
+                    image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
+                    reuseNode true
+                }
             }
+            environment {
+                CI_ENVIRONMENT_URL = "${env.STAGING_URL.trim()}"
+            }
+            steps {
+                echo 'E2E stage for Staging'
+                sh '''
+                    npx playwright test --reporter=html
+                '''
+            }
+            post {
+                always {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: false,
+                        keepAll: false,
+                        reportDir: 'playwright-report',
+                        reportFiles: 'index.html',
+                        reportName: 'Playwright HTML Report for Staging',
+                        reportTitles: '',
+                        useWrapperFileDirectly: true
+                    ])
+                }
+            }
+        }
         stage('Deploy prod') {
             agent {
                 dockerfile {
@@ -183,35 +168,62 @@ pipeline {
             }
         }
         stage('Prod E2E') {
-                    agent {
-                        docker {
-                            image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
-                            reuseNode true
-                        }
-                    }
-                    environment {
-                        CI_ENVIRONMENT_URL = 'https://guileless-lokum-460112.netlify.app'
-                    }
-                    steps {
-                        echo 'E2E stage for Production'
-                        sh '''
-                            npx playwright test --reporter=html
-                        '''
-                    }
-                    post {
-                        always {
-                            publishHTML([
-                                allowMissing: false, 
-                                alwaysLinkToLastBuild: false, 
-                                keepAll: false, 
-                                reportDir: 'playwright-report', 
-                                reportFiles: 'index.html', 
-                                reportName: 'Playwright HTML Report for Production', 
-                                reportTitles: '', 
-                                useWrapperFileDirectly: true
-                            ])
-                        }
-                    }
+            agent {
+                docker {
+                    image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
+                    reuseNode true
                 }
+            }
+            environment {
+                CI_ENVIRONMENT_URL = 'https://guileless-lokum-460112.netlify.app'
+            }
+            steps {
+                echo 'E2E stage for Production'
+                sh '''
+                    npx playwright test --reporter=html
+                '''
+            }
+            post {
+                always {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: false,
+                        keepAll: false,
+                        reportDir: 'playwright-report',
+                        reportFiles: 'index.html',
+                        reportName: 'Playwright HTML Report for Production',
+                        reportTitles: '',
+                        useWrapperFileDirectly: true
+                    ])
+                }
+            }
+        }
+        stage('AWS') {
+            agent {
+                docker {
+                    image 'amazon/aws-cli:latest'
+                    reuseNode true
+                    args '--entrypoint ""'
+                }
+            }
+            environment {
+                AWS_S3_BUCKET = 'my-jenkins-app'
+            }
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'my-aws',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    sh '''
+                        aws --version
+                        aws s3 ls
+                        aws s3 sync build s3://$AWS_S3_BUCKET
+                    '''
+                }
+            }
+        }
     }
 }
